@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ring Defender</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0a0a1a;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 650px;
+            cursor: crosshair;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: transparent;
+            width: 800px;
+            height: 650px;
+        }
+
+        #background-canvas {
+            z-index: 1;
+        }
+
+        #game-canvas {
+            z-index: 2;
+        }
+
+        #ui-canvas {
+            z-index: 3;
+        }
+
+        #ring-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 110px;
+            height: 110px;
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            background: rgba(10, 10, 26, 0.8);
+        }
+
+        .logo {
+            max-width: 288px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #4d88ff, 0 0 20px #4d88ff;
+            color: #fff;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #4d88ff, #1a53ff);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 0 15px rgba(77, 136, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(77, 136, 255, 0.8);
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            background: rgba(10, 10, 26, 0.8);
+        }
+
+        .score-display {
+            font-size: 24px;
+            margin: 15px 0;
+            color: #4d88ff;
+        }
+
+        .achievement {
+            color: #ffcc00;
+            font-size: 18px;
+            margin: 5px 0;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .achievement.visible {
+            opacity: 1;
+        }
+
+        #top-ui {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 4;
+        }
+
+        #wave-indicator {
+            font-size: 24px;
+            color: #4d88ff;
+        }
+
+        #score-container {
+            font-size: 24px;
+        }
+
+        #score-value {
+            color: #4d88ff;
+        }
+
+        #multiplier-container {
+            font-size: 18px;
+            color: #ffcc00;
+        }
+
+        #power-up-container {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            z-index: 4;
+        }
+
+        .power-up-indicator {
+            font-size: 16px;
+            color: #00ffcc;
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .power-up-indicator.active {
+            opacity: 1;
+        }
+
+        .power-up-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        #achievements-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            z-index: 4;
+        }
+
+        .achievement-popup {
+            background: rgba(10, 10, 26, 0.8);
+            border: 1px solid #ffcc00;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 16px;
+            color: #ffcc00;
+            max-width: 250px;
+            transform: translateX(300px);
+            transition: transform 0.5s ease;
+        }
+
+        .achievement-popup.visible {
+            transform: translateX(0);
+        }
+        
+        #debug-overlay {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #00ff00;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            display: none;
+            max-width: 780px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        #mute-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(10, 10, 26, 0.7);
+            border: 2px solid #4d88ff;
+            border-radius: 50%;
+            color: #4d88ff;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 5;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(77, 136, 255, 0.4);
+        }
+        
+        #mute-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(77, 136, 255, 0.6);
+        }
+        
+        #mute-button.muted {
+            color: #ff5555;
+            border-color: #ff5555;
+            box-shadow: 0 0 10px rgba(255, 85, 85, 0.4);
+        }
+
+        .tagline {
+            font-size: 20px;
+            color: #4d88ff;
+            margin-bottom: 15px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.4;
+        }
+
+        #health-label {
+            position: absolute;
+            top: 0px;
+            left: 20px;
+            font-size: 24px;
+            color: #4d88ff;
+            z-index: 4;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="background-canvas" width="800" height="650"></canvas>
+        <canvas id="game-canvas" width="800" height="650"></canvas>
+        <canvas id="ui-canvas" width="800" height="650"></canvas>
+        
+        <img id="ring-image" src="spirent-ring.png" alt="Spirent Ring">
+        
+        <div id="top-ui">
+            <div id="wave-indicator">Wave: 1</div>
+            <div id="score-container">
+                Score: <span id="score-value">0</span>
+                <div id="multiplier-container">×1</div>
+            </div>
+        </div>
+        
+        <div id="health-label">Network Health</div>
+        
+        <div id="power-up-container"></div>
+        <div id="achievements-container"></div>
+        
+        <div id="start-screen">
+            <div class="tagline">Defend Spirent's Network From Malware and DDoS Attacks!</div>
+            <img src="spirent-logo.png" alt="Spirent Logo" class="logo">
+            <h1 class="title">Ring Defender</h1>
+            <button id="start-button" class="btn">Play</button>
+        </div>
+        
+        <div id="game-over-screen">
+            <h2>Game Over</h2>
+            <div class="score-display">Final Score: <span id="final-score">0</span></div>
+            <div id="achievements-list"></div>
+            <button id="restart-button" class="btn">Play Again</button>
+        </div>
+        
+        <div id="debug-overlay"></div>
+        
+        <button id="mute-button">🔊</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Enable this for debugging
+            const DEBUG_MODE = false;
+            
+            // Main Game Class
+            class RingDefender {
+                constructor() {
+                    // Debug mode
+                    this.debugMode = DEBUG_MODE;
+                    this.debugOverlay = document.getElementById('debug-overlay');
+                    if (this.debugMode) {
+                        this.debugOverlay.style.display = 'block';
+                        this.logDebug('Game initializing...');
+                    }
+                    
+                    // Canvas setup
+                    this.backgroundCanvas = document.getElementById('background-canvas');
+                    this.gameCanvas = document.getElementById('game-canvas');
+                    this.uiCanvas = document.getElementById('ui-canvas');
+                    this.bgCtx = this.backgroundCanvas.getContext('2d');
+                    this.ctx = this.gameCanvas.getContext('2d');
+                    this.uiCtx = this.uiCanvas.getContext('2d');
+                    
+                    // Game dimensions
+                    this.width = this.gameCanvas.width;
+                    this.height = this.gameCanvas.height;
+                    this.centerX = this.width / 2;
+                    this.centerY = this.height / 2;
+                    
+                    // Game state
+                    this.gameActive = false;
+                    this.gameOver = false;
+                    this.paused = false;
+                    
+                    // UI Elements
+                    this.gameContainer = document.getElementById('game-container');
+                    this.startScreen = document.getElementById('start-screen');
+                    this.gameOverScreen = document.getElementById('game-over-screen');
+                    this.startButton = document.getElementById('start-button');
+                    this.restartButton = document.getElementById('restart-button');
+                    this.waveIndicator = document.getElementById('wave-indicator');
+                    this.scoreValue = document.getElementById('score-value');
+                    this.finalScore = document.getElementById('final-score');
+                    this.multiplierContainer = document.getElementById('multiplier-container');
+                    this.powerUpContainer = document.getElementById('power-up-container');
+                    this.achievementsContainer = document.getElementById('achievements-container');
+                    this.achievementsList = document.getElementById('achievements-list');
+                    this.ringImage = document.getElementById('ring-image');
+                    
+                    // Sound effects
+                    this.sounds = {
+                        explode: new Audio('explode.wav'),
+                        shield: new Audio('shield.wav'),
+                        ringHit: new Audio('ring-hit.wav'),
+                        waveComplete: new Audio('wave-complete.wav'),
+                        achievement: new Audio('achievement.wav')
+                    };
+                    
+                    // Background music
+                    this.music = new Audio('music.wav');
+                    this.music.loop = true;
+                    this.music.volume = 0.3; // Lower volume for background music
+                    this.musicMuted = false;
+                    
+                    // Mute button
+                    this.muteButton = document.getElementById('mute-button');
+                    this.muteButton.addEventListener('click', () => this.toggleMute());
+                    
+                    // Preload sounds
+                    this.preloadSounds();
+                    
+                    // Bind event handlers
+                    this.handleClick = this.handleClick.bind(this);
+                    this.handleTouch = this.handleTouch.bind(this);
+                    
+                    // Set up event listeners
+                    this.startButton.addEventListener('click', () => this.startGame());
+                    this.restartButton.addEventListener('click', () => this.resetGame());
+                    this.gameContainer.addEventListener('click', this.handleClick);
+                    this.gameContainer.addEventListener('touchstart', this.handleTouch, { passive: false });
+                    
+                    // Animation frame ID
+                    this.animationFrameId = null;
+                    
+                    // Initialize the game
+                    this.initGame();
+                    
+                    // Log initialization success
+                    if (this.debugMode) {
+                        this.logDebug('Game initialized successfully');
+                        this.logDebug('Click anywhere in the game area to destroy threats');
+                    }
+                }
+                
+                logDebug(message) {
+                    if (!this.debugMode) return;
+                    
+                    console.log(message);
+                    this.debugOverlay.textContent += message + '\n';
+                    
+                    // Trim if too long
+                    if (this.debugOverlay.textContent.split('\n').length > 10) {
+                        const lines = this.debugOverlay.textContent.split('\n');
+                        this.debugOverlay.textContent = lines.slice(lines.length - 10).join('\n');
+                    }
+                }
+                
+                initGame() {
+                    // Ring properties
+                    this.ring = {
+                        x: this.centerX,
+                        y: this.centerY,
+                        radius: 70,
+                        innerRadius: 60,
+                        maxHealth: 100,
+                        health: 100,
+                        shield: 0,
+                        pulseAmount: 0,
+                        pulseDirection: 1,
+                        rotation: 0
+                    };
+                    
+                    // Game properties
+                    this.score = 0;
+                    this.wave = 1;
+                    this.waveProgress = 0;
+                    this.waveThreats = 8;
+                    
+                    // Score thresholds for wave completion
+                    this.waveScoreThresholds = [
+                        0,       // Starting wave
+                        2500,    // Wave 1 completion threshold
+                        10000,   // Wave 2 completion threshold
+                        20000,   // Wave 3 completion threshold
+                        45000,   // Wave 4 completion threshold
+                        75000    // Wave 5 completion threshold
+                    ];
+                    
+                    this.multiplier = 1;
+                    this.multiplierTimer = 0;
+                    this.comboCounter = 0;
+                    this.lastClickTime = 0;
+                    
+                    // Threat properties
+                    this.threats = [];
+                    this.threatSpawnRate = 800;
+                    this.threatSpawnTimer = 0;
+                    this.minThreatSpeed = 0.7;
+                    this.maxThreatSpeed = 1.5;
+                    this.threatSizes = [20, 25, 30];
+                    this.threatTypes = ['circle', 'square', 'triangle'];
+                    this.threatColors = [
+                        '#ff5555', // Red
+                        '#55ff55', // Green
+                        '#5555ff', // Blue
+                        '#ffff55', // Yellow
+                        '#ff55ff'  // Magenta
+                    ];
+                    
+                    // Power-ups
+                    this.powerUps = [];
+                    this.activePowerUps = {
+                        shield: { active: false, duration: 0 },
+                        zapper: { active: false, duration: 0, radius: 0 },
+                        timeFreeze: { active: false, duration: 0 }
+                    };
+                    this.powerUpSpawnChance = 0.1;
+                    
+                    // Particles
+                    this.particles = [];
+                    
+                    // Achievements
+                    this.achievements = {
+                        destroyer10: { earned: false, title: "Threat Neutralizer", description: "Destroy 10 threats" },
+                        destroyer50: { earned: false, title: "Security Expert", description: "Destroy 50 threats" },
+                        destroyer100: { earned: false, title: "Cyber Guardian", description: "Destroy 100 threats" },
+                        combo5: { earned: false, title: "Combo Starter", description: "Achieve a 5x combo multiplier" },
+                        wave5: { earned: false, title: "Wave Rider", description: "Survive to wave 5" },
+                        wave10: { earned: false, title: "Persistent Defender", description: "Survive to wave 10" },
+                        perfectWave: { earned: false, title: "Perfect Defense", description: "Complete a wave without taking damage" }
+                    };
+                    this.achievementsUnlocked = 0;
+                    this.totalThreatsDestroyed = 0;
+                    this.highestMultiplier = 1;
+                    this.tookDamageThisWave = false;
+                    
+                    // Easter eggs
+                    this.easterEggTriggered = false;
+                    this.easterEggChance = 0.02;
+                    
+                    // Background
+                    this.binaryStrings = [];
+                    this.gridLines = [];
+                    this.initBackground();
+
+                    // Draw the static background
+                    this.drawBackground();
+                    
+                    // Animation timing
+                    this.lastFrameTime = 0;
+                    this.deltaTime = 0;
+                }
+                
+                initBackground() {
+                    // Create binary strings for background
+                    for (let i = 0; i < 20; i++) {
+                        this.binaryStrings.push({
+                            x: Math.random() * this.width,
+                            y: Math.random() * this.height,
+                            value: this.generateBinaryString(20),
+                            alpha: 0.1 + Math.random() * 0.2,
+                            speed: 0.2 + Math.random() * 0.3
+                        });
+                    }
+                    
+                    // Create grid lines
+                    const gridSpacing = 40;
+                    // Horizontal lines
+                    for (let y = 0; y < this.height; y += gridSpacing) {
+                        this.gridLines.push({
+                            x1: 0,
+                            y1: y,
+                            x2: this.width,
+                            y2: y,
+                            alpha: 0.1
+                        });
+                    }
+                    // Vertical lines
+                    for (let x = 0; x < this.width; x += gridSpacing) {
+                        this.gridLines.push({
+                            x1: x,
+                            y1: 0,
+                            x2: x,
+                            y2: this.height,
+                            alpha: 0.1
+                        });
+                    }
+                }
+                
+                generateBinaryString(length) {
+                    let result = '';
+                    for (let i = 0; i < length; i++) {
+                        result += Math.random() > 0.5 ? '1' : '0';
+                    }
+                    return result;
+                }
+                
+                startGame() {
+                    this.gameActive = true;
+                    this.gameOver = false;
+                    this.startScreen.style.display = 'none';
+                    
+                    // Start background music
+                    this.startMusic();
+                    
+                    // Spawn some initial threats
+                    for (let i = 0; i < 5; i++) {
+                        this.spawnThreat();
+                    }
+                    
+                    // Log game start
+                    this.logDebug('Game started - active threats: ' + this.threats.length);
+                    
+                    this.lastFrameTime = performance.now();
+                    this.animationFrameId = requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+                }
+                
+                resetGame() {
+                    this.gameOverScreen.style.display = 'none';
+                    this.initGame();
+                    this.startGame();
+                }
+                
+                gameLoop(timestamp) {
+                    // Calculate delta time
+                    this.deltaTime = timestamp - this.lastFrameTime;
+                    this.lastFrameTime = timestamp;
+                    
+                    if (!this.paused && !this.gameOver) {
+                        this.update();
+                        this.render();
+                    }
+                    
+                    if (this.gameActive && !this.gameOver) {
+                        this.animationFrameId = requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+                    }
+                }
+                
+                update() {
+                    this.updateRing();
+                    this.updateThreats();
+                    this.updatePowerUps();
+                    this.updateParticles();
+                    this.updateTimers();
+                    this.checkWaveProgress();
+                }
+                
+                updateRing() {
+                    // Ring pulse animation
+                    this.ring.pulseAmount += 0.02 * this.ring.pulseDirection;
+                    if (this.ring.pulseAmount > 1) {
+                        this.ring.pulseDirection = -1;
+                    } else if (this.ring.pulseAmount < 0) {
+                        this.ring.pulseDirection = 1;
+                    }
+                    
+                    // Ring rotation
+                    this.ring.rotation += 0.002 * this.deltaTime;
+                    
+                    // Update ring image rotation
+                    if (this.ringImage) {
+                        this.ringImage.style.transform = `translate(-50%, -50%) rotate(${this.ring.rotation}rad)`;
+                    }
+                }
+                
+                updateThreats() {
+                    // Spawn new threats
+                    this.threatSpawnTimer += this.deltaTime;
+                    if (this.threatSpawnTimer >= this.threatSpawnRate && this.threats.length < this.waveThreats) {
+                        this.spawnThreat();
+                        this.threatSpawnTimer = 0;
+                    }
+                    
+                    // Update existing threats
+                    for (let i = this.threats.length - 1; i >= 0; i--) {
+                        const threat = this.threats[i];
+                        
+                        // Skip if time freeze is active
+                        if (this.activePowerUps.timeFreeze.active) {
+                            continue;
+                        }
+                        
+                        // Move threat toward the ring
+                        const dx = this.ring.x - threat.x;
+                        const dy = this.ring.y - threat.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Normalize the direction vector
+                        const vx = dx / distance;
+                        const vy = dy / distance;
+                        
+                        // Move the threat
+                        threat.x += vx * threat.speed * this.deltaTime * 0.05;
+                        threat.y += vy * threat.speed * this.deltaTime * 0.05;
+                        
+                        // Rotate the threat
+                        threat.rotation += threat.rotationSpeed * this.deltaTime * 0.01;
+                        
+                        // Pulse the glow
+                        threat.glowIntensity += 0.01 * threat.glowDirection;
+                        if (threat.glowIntensity > 1) {
+                            threat.glowDirection = -1;
+                        } else if (threat.glowIntensity < 0.5) {
+                            threat.glowDirection = 1;
+                        }
+                        
+                        // Check for collision with ring
+                        const newDistance = Math.sqrt(
+                            Math.pow(this.ring.x - threat.x, 2) + 
+                            Math.pow(this.ring.y - threat.y, 2)
+                        );
+                        
+                        if (newDistance <= this.ring.radius + threat.radius) {
+                            // Collision with ring
+                            this.handleRingCollision(threat);
+                            this.threats.splice(i, 1);
+                        }
+                        
+                        // Check for collision with zapper if active
+                        if (this.activePowerUps.zapper.active) {
+                            const zapperDistance = Math.sqrt(
+                                Math.pow(this.ring.x - threat.x, 2) + 
+                                Math.pow(this.ring.y - threat.y, 2)
+                            );
+                            
+                            if (zapperDistance <= this.activePowerUps.zapper.radius) {
+                                this.destroyThreat(threat, true);
+                                this.threats.splice(i, 1);
+                            }
+                        }
+                    }
+                }
+                
+                spawnThreat() {
+                    // Determine spawn position (at edge of visible canvas)
+                    const angle = Math.random() * Math.PI * 2;
+                    const spawnDistance = Math.max(this.width, this.height) / 1.5;
+                    const x = this.centerX + Math.cos(angle) * spawnDistance;
+                    const y = this.centerY + Math.sin(angle) * spawnDistance;
+                    
+                    // Randomize threat properties
+                    const sizeIndex = Math.floor(Math.random() * this.threatSizes.length);
+                    const typeIndex = Math.floor(Math.random() * this.threatTypes.length);
+                    const colorIndex = Math.floor(Math.random() * this.threatColors.length);
+                    
+                    const specialThreat = Math.random() < this.easterEggChance;
+                    
+                    // Create the threat
+                    const threat = {
+                        x: x,
+                        y: y,
+                        radius: this.threatSizes[sizeIndex],
+                        type: this.threatTypes[typeIndex],
+                        color: this.threatColors[colorIndex],
+                        speed: this.minThreatSpeed + Math.random() * (this.maxThreatSpeed - this.minThreatSpeed),
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 2,
+                        glowIntensity: 0.5 + Math.random() * 0.5,
+                        glowDirection: 1,
+                        points: 10 + (this.wave * 2),
+                        special: specialThreat
+                    };
+                    
+                    // Special threats get unique properties
+                    if (specialThreat) {
+                        threat.color = '#ffcc00'; // Gold
+                        threat.points *= 3;
+                        threat.glowIntensity = 1;
+                    }
+                    
+                    this.threats.push(threat);
+                    this.waveProgress++;
+                    
+                    // Log threat spawn
+                    if (this.debugMode) {
+                        this.logDebug(`Spawned ${threat.type} threat at (${Math.round(x)}, ${Math.round(y)})`);
+                    }
+                }
+                
+                handleRingCollision(threat) {
+                    // Create explosion particles
+                    this.createExplosion(threat.x, threat.y, threat.color);
+                    
+                    // Reduce ring health if shield isn't active
+                    if (this.activePowerUps.shield.active) {
+                        // Shield absorbs the damage
+                        this.activePowerUps.shield.duration -= 2000; // Reduce shield duration
+                        if (this.activePowerUps.shield.duration <= 0) {
+                            this.activePowerUps.shield.active = false;
+                            this.updatePowerUpUI();
+                        }
+                    } else {
+                        // Take damage
+                        this.ring.health -= 10;
+                        this.tookDamageThisWave = true;
+                        
+                        // Play ring hit sound
+                        this.playSound('ringHit');
+                        
+                        // Visual feedback for damage
+                        this.createRingPulse('#ff0000');
+                        
+                        // Reset combo
+                        this.resetCombo();
+                        
+                        // Check for game over
+                        if (this.ring.health <= 0) {
+                            this.endGame();
+                        }
+                    }
+                }
+                
+                handleClick(e) {
+                    if (!this.gameActive || this.gameOver) return;
+                    
+                    // Get click position relative to canvas
+                    const rect = this.gameCanvas.getBoundingClientRect();
+                    const scaleX = this.gameCanvas.width / rect.width;
+                    const scaleY = this.gameCanvas.height / rect.height;
+                    
+                    const x = (e.clientX - rect.left) * scaleX;
+                    const y = (e.clientY - rect.top) * scaleY;
+                    
+                    // Debug info
+                    if (this.debugMode) {
+                        this.logDebug(`Click at (${Math.round(x)}, ${Math.round(y)})`);
+                    }
+                    
+                    // Visual feedback at click point
+                    this.createClickFeedback(x, y);
+                    
+                    // Check if clicked on any threats
+                    this.checkThreatHit(x, y);
+                }
+                
+                handleTouch(e) {
+                    if (!this.gameActive || this.gameOver) return;
+                    e.preventDefault();
+                    
+                    // Get touch position relative to canvas
+                    const rect = this.gameCanvas.getBoundingClientRect();
+                    const scaleX = this.gameCanvas.width / rect.width;
+                    const scaleY = this.gameCanvas.height / rect.height;
+                    
+                    const x = (e.touches[0].clientX - rect.left) * scaleX;
+                    const y = (e.touches[0].clientY - rect.top) * scaleY;
+                    
+                    // Debug info
+                    if (this.debugMode) {
+                        this.logDebug(`Touch at (${Math.round(x)}, ${Math.round(y)})`);
+                    }
+                    
+                    // Visual feedback at touch point
+                    this.createClickFeedback(x, y);
+                    
+                    // Check if touched any threats
+                    this.checkThreatHit(x, y);
+                }
+                
+                createClickFeedback(x, y) {
+                    // Create a small visual feedback at click/tap point
+                    const clickParticle = {
+                        x: x,
+                        y: y,
+                        radius: 15,
+                        color: '#ffffff',
+                        vx: 0,
+                        vy: 0,
+                        life: 300,
+                        initialLife: 300,
+                        alpha: 0.7,
+                        type: 'clickFeedback'
+                    };
+                    
+                    this.particles.push(clickParticle);
+                }
+                
+                checkThreatHit(x, y) {
+                    let hitThreat = false;
+                    let hitIndex = -1;
+                    let closestDistance = Infinity;
+                    
+                    // First pass: find the closest threat that was hit
+                    for (let i = 0; i < this.threats.length; i++) {
+                        const threat = this.threats[i];
+                        const dx = x - threat.x;
+                        const dy = y - threat.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Use a larger hit area to make it easier
+                        const hitRadius = threat.radius * 1.5;
+                        
+                        if (distance <= hitRadius && distance < closestDistance) {
+                            closestDistance = distance;
+                            hitIndex = i;
+                            hitThreat = true;
+                        }
+                    }
+                    
+                    // If we hit a threat, destroy it
+                    if (hitThreat && hitIndex >= 0) {
+                        const hitThreatObj = this.threats[hitIndex];
+                        if (this.debugMode) {
+                            this.logDebug(`Hit ${hitThreatObj.type} threat at (${Math.round(hitThreatObj.x)}, ${Math.round(hitThreatObj.y)})`);
+                        }
+                        this.destroyThreat(hitThreatObj);
+                        this.threats.splice(hitIndex, 1);
+                        return;
+                    }
+                    
+                    // If no threat was hit, check power-ups
+                    for (let i = this.powerUps.length - 1; i >= 0; i--) {
+                        const powerUp = this.powerUps[i];
+                        const dx = x - powerUp.x;
+                        const dy = y - powerUp.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Use a larger hit area for power-ups
+                        const hitRadius = powerUp.radius * 1.5;
+                        
+                        if (distance <= hitRadius) {
+                            // Hit a power-up
+                            if (this.debugMode) {
+                                this.logDebug(`Collected ${powerUp.type} power-up`);
+                            }
+                            this.collectPowerUp(powerUp);
+                            this.powerUps.splice(i, 1);
+                            hitThreat = true;
+                            break;
+                        }
+                    }
+                    
+                    // If we didn't hit anything, reset combo
+                    if (!hitThreat) {
+                        if (this.debugMode) {
+                            this.logDebug('Miss - no threat hit');
+                        }
+                        this.resetCombo();
+                    }
+                }
+                
+                destroyThreat(threat, zapperKill = false) {
+                    // Create explosion particles
+                    this.createExplosion(threat.x, threat.y, threat.color);
+                    
+                    // Play explosion sound
+                    this.playSound('explode');
+                    
+                    // Update score
+                    const pointsEarned = threat.points * this.multiplier;
+                    this.score += pointsEarned;
+                    this.scoreValue.textContent = this.score;
+                    
+                    // Increment destroyed counter
+                    this.totalThreatsDestroyed++;
+                    
+                    // Log destruction with score progress
+                    if (this.debugMode) {
+                        const nextThreshold = this.waveScoreThresholds[this.wave];
+                        this.logDebug(`Destroyed threat: Wave ${this.wave}, Score ${this.score}/${nextThreshold}`);
+                    }
+                    
+                    // Create score popup
+                    this.createScorePopup(threat.x, threat.y, pointsEarned);
+                    
+                    // Update combo
+                    this.updateCombo();
+                    
+                    // Check for powerup spawn
+                    if (Math.random() < this.powerUpSpawnChance) {
+                        this.spawnPowerUp(threat.x, threat.y);
+                    }
+                    
+                    // Check for special threats
+                    if (threat.special) {
+                        this.triggerEasterEgg();
+                    }
+                    
+                    this.checkAchievements();
+                }
+                
+                updateCombo() {
+                    const currentTime = performance.now();
+                    const timeSinceLastClick = currentTime - this.lastClickTime;
+                    
+                    // If click happened within the combo window, increase multiplier
+                    if (timeSinceLastClick < 1000) {
+                        this.comboCounter++;
+                        if (this.comboCounter >= 3) {
+                            this.multiplier = Math.min(this.multiplier + 1, 10);
+                            this.multiplierContainer.textContent = `×${this.multiplier}`;
+                            
+                            // Track highest multiplier for achievements
+                            if (this.multiplier > this.highestMultiplier) {
+                                this.highestMultiplier = this.multiplier;
+                                this.checkAchievements();
+                            }
+                        }
+                    } else {
+                        // Reset combo counter but keep multiplier
+                        this.comboCounter = 1;
+                    }
+                    
+                    // Reset the multiplier timer
+                    this.multiplierTimer = 3000;
+                    this.lastClickTime = currentTime;
+                }
+                
+                resetCombo() {
+                    this.multiplier = 1;
+                    this.comboCounter = 0;
+                    this.multiplierTimer = 0;
+                    this.multiplierContainer.textContent = `×${this.multiplier}`;
+                }
+                
+                updatePowerUps() {
+                    // Move power-ups
+                    for (let i = this.powerUps.length - 1; i >= 0; i--) {
+                        const powerUp = this.powerUps[i];
+                        
+                        // Skip if time freeze is active
+                        if (this.activePowerUps.timeFreeze.active) {
+                            continue;
+                        }
+                        
+                        // Move toward the ring slowly
+                        const dx = this.ring.x - powerUp.x;
+                        const dy = this.ring.y - powerUp.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Normalize the direction vector
+                        const vx = dx / distance;
+                        const vy = dy / distance;
+                        
+                        // Move the power-up
+                        powerUp.x += vx * 0.5 * this.deltaTime * 0.1;
+                        powerUp.y += vy * 0.5 * this.deltaTime * 0.1;
+                        
+                        // Pulse animation
+                        powerUp.pulse += 0.02 * powerUp.pulseDirection;
+                        if (powerUp.pulse > 1) {
+                            powerUp.pulseDirection = -1;
+                        } else if (powerUp.pulse < 0) {
+                            powerUp.pulseDirection = 1;
+                        }
+                        
+                        // Remove if too old
+                        powerUp.lifetime -= this.deltaTime;
+                        if (powerUp.lifetime <= 0) {
+                            this.powerUps.splice(i, 1);
+                        }
+                    }
+                    
+                    // Update active power-up durations
+                    if (this.activePowerUps.shield.active) {
+                        this.activePowerUps.shield.duration -= this.deltaTime;
+                        if (this.activePowerUps.shield.duration <= 0) {
+                            this.activePowerUps.shield.active = false;
+                            this.updatePowerUpUI();
+                        }
+                    }
+                    
+                    if (this.activePowerUps.zapper.active) {
+                        this.activePowerUps.zapper.duration -= this.deltaTime;
+                        if (this.activePowerUps.zapper.duration <= 0) {
+                            this.activePowerUps.zapper.active = false;
+                            this.updatePowerUpUI();
+                        } else {
+                            // Grow the zapper radius for animation
+                            this.activePowerUps.zapper.radius = 
+                                this.ring.radius + 100 + (50 * Math.sin(performance.now() * 0.005));
+                        }
+                    }
+                    
+                    if (this.activePowerUps.timeFreeze.active) {
+                        this.activePowerUps.timeFreeze.duration -= this.deltaTime;
+                        if (this.activePowerUps.timeFreeze.duration <= 0) {
+                            this.activePowerUps.timeFreeze.active = false;
+                            this.updatePowerUpUI();
+                        }
+                    }
+                }
+                
+                spawnPowerUp(x, y) {
+                    // Choose a random power-up type
+                    const types = ['shield', 'zapper', 'timeFreeze'];
+                    const randomType = types[Math.floor(Math.random() * types.length)];
+                    
+                    // Colors for each power-up type
+                    const colors = {
+                        shield: '#00ffcc',
+                        zapper: '#ff5500',
+                        timeFreeze: '#55aaff'
+                    };
+                    
+                    // Create the power-up
+                    const powerUp = {
+                        x: x,
+                        y: y,
+                        radius: 15,
+                        type: randomType,
+                        color: colors[randomType],
+                        pulse: 0,
+                        pulseDirection: 1,
+                        lifetime: 8000 // 8 seconds
+                    };
+                    
+                    this.powerUps.push(powerUp);
+                    
+                    // Log power-up spawn
+                    if (this.debugMode) {
+                        this.logDebug(`Spawned ${randomType} power-up at (${Math.round(x)}, ${Math.round(y)})`);
+                    }
+                }
+                
+                collectPowerUp(powerUp) {
+                    // Apply the power-up effect
+                    switch (powerUp.type) {
+                        case 'shield':
+                            this.activePowerUps.shield.active = true;
+                            this.activePowerUps.shield.duration = 10000; // 10 seconds
+                            // Play shield sound
+                            this.playSound('shield');
+                            break;
+                        case 'zapper':
+                            this.activePowerUps.zapper.active = true;
+                            this.activePowerUps.zapper.duration = 5000; // 5 seconds
+                            this.activePowerUps.zapper.radius = this.ring.radius + 100;
+                            break;
+                        case 'timeFreeze':
+                            this.activePowerUps.timeFreeze.active = true;
+                            this.activePowerUps.timeFreeze.duration = 3000; // 3 seconds
+                            break;
+                    }
+                    
+                    // Create particles
+                    this.createExplosion(powerUp.x, powerUp.y, powerUp.color);
+                    
+                    // Create power-up collected message
+                    this.createPowerUpMessage(powerUp.type);
+                    
+                    // Update UI
+                    this.updatePowerUpUI();
+                }
+                
+                updatePowerUpUI() {
+                    // Clear existing power-up indicators
+                    this.powerUpContainer.innerHTML = '';
+                    
+                    // Create indicators for active power-ups
+                    if (this.activePowerUps.shield.active) {
+                        this.createPowerUpIndicator('shield', 'Shield', '#00ffcc', this.activePowerUps.shield.duration);
+                    }
+                    
+                    if (this.activePowerUps.zapper.active) {
+                        this.createPowerUpIndicator('zapper', 'Zapper', '#ff5500', this.activePowerUps.zapper.duration);
+                    }
+                    
+                    if (this.activePowerUps.timeFreeze.active) {
+                        this.createPowerUpIndicator('timeFreeze', 'Time Freeze', '#55aaff', this.activePowerUps.timeFreeze.duration);
+                    }
+                }
+                
+                createPowerUpIndicator(type, name, color, duration) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'power-up-indicator active';
+                    
+                    const icon = document.createElement('div');
+                    icon.className = 'power-up-icon';
+                    icon.style.backgroundColor = color;
+                    
+                    const text = document.createElement('span');
+                    text.textContent = `${name}: ${Math.ceil(duration / 1000)}s`;
+                    
+                    indicator.appendChild(icon);
+                    indicator.appendChild(text);
+                    this.powerUpContainer.appendChild(indicator);
+                }
+                
+                createPowerUpMessage(type) {
+                    const messages = {
+                        shield: 'Shield Activated!',
+                        zapper: 'Zapper Field Deployed!',
+                        timeFreeze: 'Time Freeze!'
+                    };
+                    
+                    const colors = {
+                        shield: '#00ffcc',
+                        zapper: '#ff5500',
+                        timeFreeze: '#55aaff'
+                    };
+                    
+                    const popup = document.createElement('div');
+                    popup.className = 'achievement-popup';
+                    popup.style.borderColor = colors[type];
+                    popup.style.color = colors[type];
+                    popup.textContent = messages[type];
+                    
+                    this.achievementsContainer.appendChild(popup);
+                    
+                    // Trigger animation
+                    setTimeout(() => {
+                        popup.classList.add('visible');
+                    }, 10);
+                    
+                    // Remove after display
+                    setTimeout(() => {
+                        popup.classList.remove('visible');
+                        setTimeout(() => {
+                            popup.remove();
+                        }, 500);
+                    }, 3000);
+                }
+                
+                updateParticles() {
+                    // Update existing particles
+                    for (let i = this.particles.length - 1; i >= 0; i--) {
+                        const particle = this.particles[i];
+                        
+                        // Skip if time freeze is active (except for ring pulses)
+                        if (this.activePowerUps.timeFreeze.active && particle.type !== 'ringPulse') {
+                            continue;
+                        }
+                        
+                        // Move particle
+                        particle.x += particle.vx * this.deltaTime * 0.1;
+                        particle.y += particle.vy * this.deltaTime * 0.1;
+                        
+                        // Update properties
+                        particle.life -= this.deltaTime;
+                        particle.alpha = particle.life / particle.initialLife;
+                        
+                        // Special handling for different particle types
+                        if (particle.type === 'ringPulse') {
+                            particle.radius += particle.expansionRate * this.deltaTime * 0.1;
+                        } else if (particle.type === 'scorePopup') {
+                            particle.y -= 0.5 * this.deltaTime * 0.1;
+                        } else if (particle.type === 'clickFeedback') {
+                            particle.radius += 0.2 * this.deltaTime * 0.1;
+                        }
+                        
+                        // Remove if dead
+                        if (particle.life <= 0) {
+                            this.particles.splice(i, 1);
+                        }
+                    }
+                }
+                
+                createExplosion(x, y, color) {
+                    const particleCount = 15;
+                    for (let i = 0; i < particleCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 1 + Math.random() * 3;
+                        
+                        const particle = {
+                            x: x,
+                            y: y,
+                            radius: 2 + Math.random() * 3,
+                            color: color,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 500 + Math.random() * 500,
+                            initialLife: 500 + Math.random() * 500,
+                            alpha: 1,
+                            type: 'explosion'
+                        };
+                        
+                        this.particles.push(particle);
+                    }
+                }
+                
+                createRingPulse(color) {
+                    const pulse = {
+                        x: this.ring.x,
+                        y: this.ring.y,
+                        radius: this.ring.radius,
+                        color: color,
+                        vx: 0,
+                        vy: 0,
+                        life: 1000,
+                        initialLife: 1000,
+                        alpha: 0.5,
+                        expansionRate: 0.5,
+                        type: 'ringPulse'
+                    };
+                    
+                    this.particles.push(pulse);
+                }
+                
+                createScorePopup(x, y, points) {
+                    const popup = {
+                        x: x,
+                        y: y,
+                        text: `+${points}`,
+                        color: points > 10 ? '#ffcc00' : '#ffffff',
+                        vx: 0,
+                        vy: -0.5,
+                        life: 1000,
+                        initialLife: 1000,
+                        alpha: 1,
+                        type: 'scorePopup'
+                    };
+                    
+                    this.particles.push(popup);
+                }
+                
+                updateTimers() {
+                    // Update multiplier timer
+                    if (this.multiplier > 1) {
+                        this.multiplierTimer -= this.deltaTime;
+                        if (this.multiplierTimer <= 0) {
+                            this.resetCombo();
+                        }
+                    }
+                }
+                
+                checkWaveProgress() {
+                    // Check if current score exceeds the threshold for this wave
+                    if (this.score >= this.waveScoreThresholds[this.wave]) {
+                        // Start next wave when we reach the score threshold
+                        this.startNextWave();
+                    } else if (this.threats.length === 0) {
+                        // If no threats on screen, spawn more to keep action going
+                        this.spawnThreat();
+                    }
+                }
+                
+                startNextWave() {
+                    // Complete current wave achievements
+                    if (!this.tookDamageThisWave) {
+                        this.achievements.perfectWave.earned = true;
+                        this.checkAchievements();
+                    }
+                    
+                    // Play wave complete sound
+                    this.playSound('waveComplete');
+                    
+                    // Increment wave
+                    this.wave++;
+                    this.waveIndicator.textContent = `Wave: ${this.wave}`;
+                    this.waveProgress = 0;
+                    
+                    // Increase difficulty
+                    this.waveThreats = 8 + (this.wave * 3);
+                    this.minThreatSpeed = 0.7 + (this.wave * 0.15);
+                    this.maxThreatSpeed = 1.5 + (this.wave * 0.2);
+                    this.threatSpawnRate = Math.max(250, 800 - (this.wave * 150));
+                    
+                    // Restore some health
+                    this.ring.health = Math.min(this.ring.maxHealth, this.ring.health + 10);
+                    
+                    // Reset damage tracker
+                    this.tookDamageThisWave = false;
+                    
+                    // Check achievements
+                    this.checkAchievements();
+                    
+                    // Wave transition visual
+                    this.createRingPulse('#ffffff');
+                    
+                    // Log wave start
+                    if (this.debugMode) {
+                        this.logDebug(`Starting Wave ${this.wave} - ${this.waveThreats} threats`);
+                    }
+                }
+                
+                checkAchievements() {
+                    // Check for achievements
+                    if (this.totalThreatsDestroyed >= 10 && !this.achievements.destroyer10.earned) {
+                        this.achievements.destroyer10.earned = true;
+                        this.triggerAchievement('destroyer10');
+                    }
+                    
+                    if (this.totalThreatsDestroyed >= 50 && !this.achievements.destroyer50.earned) {
+                        this.achievements.destroyer50.earned = true;
+                        this.triggerAchievement('destroyer50');
+                    }
+                    
+                    if (this.totalThreatsDestroyed >= 100 && !this.achievements.destroyer100.earned) {
+                        this.achievements.destroyer100.earned = true;
+                        this.triggerAchievement('destroyer100');
+                    }
+                    
+                    if (this.highestMultiplier >= 5 && !this.achievements.combo5.earned) {
+                        this.achievements.combo5.earned = true;
+                        this.triggerAchievement('combo5');
+                    }
+                    
+                    if (this.wave >= 5 && !this.achievements.wave5.earned) {
+                        this.achievements.wave5.earned = true;
+                        this.triggerAchievement('wave5');
+                    }
+                    
+                    if (this.wave >= 10 && !this.achievements.wave10.earned) {
+                        this.achievements.wave10.earned = true;
+                        this.triggerAchievement('wave10');
+                    }
+                }
+                
+                triggerAchievement(id) {
+                    const achievement = this.achievements[id];
+                    
+                    // Play achievement sound
+                    this.playSound('achievement');
+                    
+                    // Create achievement popup
+                    const popup = document.createElement('div');
+                    popup.className = 'achievement-popup';
+                    popup.textContent = `Achievement: ${achievement.title} - ${achievement.description}`;
+                    
+                    this.achievementsContainer.appendChild(popup);
+                    
+                    // Trigger animation
+                    setTimeout(() => {
+                        popup.classList.add('visible');
+                    }, 10);
+                    
+                    // Remove after display
+                    setTimeout(() => {
+                        popup.classList.remove('visible');
+                        setTimeout(() => {
+                            popup.remove();
+                        }, 500);
+                    }, 3000);
+                    
+                    // Increment counter
+                    this.achievementsUnlocked++;
+                    
+                    // Log achievement
+                    if (this.debugMode) {
+                        this.logDebug(`Achievement unlocked: ${achievement.title}`);
+                    }
+                }
+                
+                triggerEasterEgg() {
+                    if (this.easterEggTriggered) return;
+                    
+                    // Create a massive ring pulse
+                    this.createRingPulse('#ffcc00');
+                    
+                    // Particle explosion
+                    for (let i = 0; i < 100; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * 100;
+                        const x = this.ring.x + Math.cos(angle) * distance;
+                        const y = this.ring.y + Math.sin(angle) * distance;
+                        
+                        const colors = ['#ffcc00', '#ffffff', '#ff5500'];
+                        this.createExplosion(x, y, colors[i % 3]);
+                    }
+                    
+                    // Create message
+                    const messages = [
+                        'Easter Egg Found!',
+                        'Special Bonus!',
+                        'Secret Discovered!'
+                    ];
+                    
+                    const popup = document.createElement('div');
+                    popup.className = 'achievement-popup';
+                    popup.style.borderColor = '#ffcc00';
+                    popup.style.color = '#ffcc00';
+                    popup.textContent = messages[Math.floor(Math.random() * messages.length)];
+                    
+                    this.achievementsContainer.appendChild(popup);
+                    
+                    // Trigger animation
+                    setTimeout(() => {
+                        popup.classList.add('visible');
+                    }, 10);
+                    
+                    // Remove after display
+                    setTimeout(() => {
+                        popup.classList.remove('visible');
+                        setTimeout(() => {
+                            popup.remove();
+                        }, 500);
+                    }, 3000);
+                    
+                    // Add bonus score
+                    this.score += 500;
+                    this.scoreValue.textContent = this.score;
+                    
+                    // Prevent triggering too often
+                    this.easterEggTriggered = true;
+                    setTimeout(() => {
+                        this.easterEggTriggered = false;
+                    }, 15000);
+                    
+                    // Log easter egg
+                    if (this.debugMode) {
+                        this.logDebug('Easter egg triggered! +500 points');
+                    }
+                }
+                
+                endGame() {
+                    this.gameActive = false;
+                    this.gameOver = true;
+                    
+                    // Stop background music
+                    this.stopMusic();
+                    
+                    // Update final score
+                    this.finalScore.textContent = this.score;
+                    
+                    // Display achievements
+                    this.achievementsList.innerHTML = '';
+                    for (const id in this.achievements) {
+                        const achievement = this.achievements[id];
+                        if (achievement.earned) {
+                            const element = document.createElement('div');
+                            element.className = 'achievement';
+                            element.textContent = `${achievement.title} - ${achievement.description}`;
+                            this.achievementsList.appendChild(element);
+                            
+                            // Stagger displaying achievements
+                            setTimeout(() => {
+                                element.classList.add('visible');
+                            }, 500 + Object.keys(this.achievements).indexOf(id) * 300);
+                        }
+                    }
+                    
+                    // Show game over screen
+                    this.gameOverScreen.style.display = 'flex';
+                    
+                    // Log game over
+                    if (this.debugMode) {
+                        this.logDebug(`Game over - Final score: ${this.score}`);
+                    }
+                }
+                
+                render() {
+                    // Clear canvas
+                    this.ctx.clearRect(0, 0, this.width, this.height);
+                    this.uiCtx.clearRect(0, 0, this.width, this.height);
+                    
+                    // Draw health bar
+                    this.drawHealthBar();
+                    
+                    // Draw active power-ups effects
+                    this.drawPowerUpEffects();
+                    
+                    // Draw ring
+                    this.drawRing();
+                    
+                    // Draw threats
+                    this.drawThreats();
+                    
+                    // Draw power-ups
+                    this.drawPowerUps();
+                    
+                    // Draw particles
+                    this.drawParticles();
+                    
+                    // Debug overlay
+                    if (this.debugMode) {
+                        this.drawDebugOverlay();
+                    }
+                }
+                
+                drawDebugOverlay() {
+                    this.uiCtx.font = '12px monospace';
+                    this.uiCtx.fillStyle = '#00ff00';
+                    this.uiCtx.fillText(`Threats: ${this.threats.length}`, 10, this.height - 60);
+                    this.uiCtx.fillText(`Wave: ${this.wave} (${this.waveProgress}/${this.waveThreats})`, 10, this.height - 45);
+                    this.uiCtx.fillText(`FPS: ${Math.round(1000 / this.deltaTime)}`, 10, this.height - 30);
+                    this.uiCtx.fillText(`Particles: ${this.particles.length}`, 10, this.height - 15);
+                }
+                
+                drawBackground() {
+                    // Clear the background canvas
+                    this.bgCtx.clearRect(0, 0, this.width, this.height);
+                    
+                    // Draw background color
+                    this.bgCtx.fillStyle = '#0a0a1a';
+                    this.bgCtx.fillRect(0, 0, this.width, this.height);
+                    
+                    // Draw grid lines
+                    this.bgCtx.strokeStyle = 'rgba(80, 120, 200, 0.1)';
+                    this.bgCtx.lineWidth = 1;
+                    
+                    for (const line of this.gridLines) {
+                        this.bgCtx.beginPath();
+                        this.bgCtx.moveTo(line.x1, line.y1);
+                        this.bgCtx.lineTo(line.x2, line.y2);
+                        this.bgCtx.globalAlpha = line.alpha;
+                        this.bgCtx.stroke();
+                    }
+                    
+                    // Draw binary strings
+                    this.bgCtx.font = '12px monospace';
+                    this.bgCtx.textAlign = 'center';
+                    
+                    for (const binary of this.binaryStrings) {
+                        this.bgCtx.fillStyle = `rgba(0, 255, 170, ${binary.alpha})`;
+                        this.bgCtx.globalAlpha = binary.alpha;
+                        this.bgCtx.fillText(binary.value, binary.x, binary.y);
+                    }
+                    
+                    // Reset alpha
+                    this.bgCtx.globalAlpha = 1;
+                }
+                
+                drawRing() {
+                    // Pulse effect
+                    const pulseAmount = this.ring.pulseAmount * 5;
+                    
+                    // Create gradient
+                    const gradient = this.ctx.createRadialGradient(
+                        this.ring.x, this.ring.y, this.ring.innerRadius - pulseAmount,
+                        this.ring.x, this.ring.y, this.ring.radius + pulseAmount
+                    );
+                    
+                    // Gradient colors for shield vs normal
+                    if (this.activePowerUps.shield.active) {
+                        gradient.addColorStop(0, 'rgba(0, 255, 200, 0)');  // Inner area transparent
+                        gradient.addColorStop(0.7, 'rgba(0, 255, 200, 0.5)');
+                        gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+                    } else {
+                        gradient.addColorStop(0, 'rgba(77, 136, 255, 0)');  // Inner area transparent
+                        gradient.addColorStop(0.7, 'rgba(77, 136, 255, 0.5)');
+                        gradient.addColorStop(1, 'rgba(77, 136, 255, 0)');
+                    }
+                    
+                    // Draw outer glow
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.ring.x, this.ring.y, this.ring.radius + 10 + pulseAmount, 0, Math.PI * 2);
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fill();
+                    
+                    // Draw rings
+                    this.ctx.lineWidth = 4;
+                    this.ctx.lineCap = 'round';
+                    
+                    // Main ring
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.ring.x, this.ring.y, this.ring.radius, 0, Math.PI * 2);
+                    this.ctx.strokeStyle = this.activePowerUps.shield.active ? '#00ffcc' : '#4d88ff';
+                    this.ctx.stroke();
+                    
+                    // Inner ring
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.ring.x, this.ring.y, this.ring.innerRadius, 0, Math.PI * 2);
+                    this.ctx.strokeStyle = this.activePowerUps.shield.active ? '#00ffcc' : '#4d88ff';
+                    this.ctx.stroke();
+                    
+                    // Draw accents
+                    this.drawRingAccents();
+                }
+                
+                drawRingAccents() {
+                    // Number of accent lines
+                    const count = 12;
+                    const innerRadius = this.ring.innerRadius;
+                    const outerRadius = this.ring.radius;
+                    
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeStyle = this.activePowerUps.shield.active ? '#00ffcc' : '#4d88ff';
+                    
+                    for (let i = 0; i < count; i++) {
+                        const angle = (i / count) * Math.PI * 2 + this.ring.rotation;
+                        
+                        // Only draw some of the lines (alternating)
+                        if (i % 3 !== 0) continue;
+                        
+                        const x1 = this.ring.x + Math.cos(angle) * innerRadius;
+                        const y1 = this.ring.y + Math.sin(angle) * innerRadius;
+                        const x2 = this.ring.x + Math.cos(angle) * outerRadius;
+                        const y2 = this.ring.y + Math.sin(angle) * outerRadius;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x1, y1);
+                        this.ctx.lineTo(x2, y2);
+                        this.ctx.stroke();
+                    }
+                }
+                
+                drawHealthBar() {
+                    const barWidth = 400;
+                    const barHeight = 10;
+                    const x = this.centerX - barWidth / 2;
+                    const y = 10;
+                    
+                    // Draw border
+                    this.uiCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    this.uiCtx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
+                    
+                    // Draw background
+                    this.uiCtx.fillStyle = 'rgba(40, 40, 60, 0.5)';
+                    this.uiCtx.fillRect(x, y, barWidth, barHeight);
+                    
+                    // Draw health
+                    const healthPercent = this.ring.health / this.ring.maxHealth;
+                    const healthWidth = barWidth * healthPercent;
+                    
+                    // Color based on health remaining
+                    let healthColor;
+                    if (healthPercent > 0.6) {
+                        healthColor = '#00ff88';
+                    } else if (healthPercent > 0.3) {
+                        healthColor = '#ffcc00';
+                    } else {
+                        healthColor = '#ff4400';
+                    }
+                    
+                    this.uiCtx.fillStyle = healthColor;
+                    this.uiCtx.fillRect(x, y, healthWidth, barHeight);
+                }
+                
+                drawPowerUpEffects() {
+                    // Draw shield
+                    if (this.activePowerUps.shield.active) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(this.ring.x, this.ring.y, this.ring.radius + 15, 0, Math.PI * 2);
+                        this.ctx.lineWidth = 2;
+                        this.ctx.strokeStyle = '#00ffcc';
+                        this.ctx.setLineDash([5, 5]);
+                        this.ctx.stroke();
+                        this.ctx.setLineDash([]);
+                    }
+                    
+                    // Draw zapper field
+                    if (this.activePowerUps.zapper.active) {
+                        const radius = this.activePowerUps.zapper.radius;
+                        
+                        // Create gradient
+                        const gradient = this.ctx.createRadialGradient(
+                            this.ring.x, this.ring.y, this.ring.radius,
+                            this.ring.x, this.ring.y, radius
+                        );
+                        
+                        gradient.addColorStop(0, 'rgba(255, 85, 0, 0.2)');
+                        gradient.addColorStop(1, 'rgba(255, 85, 0, 0)');
+                        
+                        this.ctx.beginPath();
+                        this.ctx.arc(this.ring.x, this.ring.y, radius, 0, Math.PI * 2);
+                        this.ctx.fillStyle = gradient;
+                        this.ctx.fill();
+                        
+                        // Draw outer circle
+                        this.ctx.beginPath();
+                        this.ctx.arc(this.ring.x, this.ring.y, radius, 0, Math.PI * 2);
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeStyle = 'rgba(255, 85, 0, 0.5)';
+                        this.ctx.stroke();
+                    }
+                    
+                    // Draw time freeze effect
+                    if (this.activePowerUps.timeFreeze.active) {
+                        // Apply a blue tint to the entire canvas
+                        this.ctx.fillStyle = 'rgba(85, 170, 255, 0.1)';
+                        this.ctx.fillRect(0, 0, this.width, this.height);
+                        
+                        // Draw the time freeze icon
+                        this.uiCtx.font = '24px Arial';
+                        this.uiCtx.fillStyle = '#55aaff';
+                        this.uiCtx.textAlign = 'center';
+                        const timeLeft = Math.ceil(this.activePowerUps.timeFreeze.duration / 1000);
+                        this.uiCtx.fillText(`⏱ ${timeLeft}s`, this.centerX, 80);
+                    }
+                }
+                
+                drawThreats() {
+                    for (const threat of this.threats) {
+                        // Save context state
+                        this.ctx.save();
+                        
+                        // Translate to threat position
+                        this.ctx.translate(threat.x, threat.y);
+                        this.ctx.rotate(threat.rotation);
+                        
+                        // Glow effect
+                        this.ctx.shadowBlur = 10 + threat.glowIntensity * 5;
+                        this.ctx.shadowColor = threat.color;
+                        
+                        // Draw based on threat type
+                        switch (threat.type) {
+                            case 'circle':
+                                this.drawCircleThreat(threat);
+                                break;
+                            case 'square':
+                                this.drawSquareThreat(threat);
+                                break;
+                            case 'triangle':
+                                this.drawTriangleThreat(threat);
+                                break;
+                        }
+                        
+                        // Restore context state
+                        this.ctx.restore();
+                    }
+                }
+                
+                drawCircleThreat(threat) {
+                    // Main circle
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, threat.radius, 0, Math.PI * 2);
+                    this.ctx.strokeStyle = threat.color;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Inner circle
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, threat.radius * 0.6, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                    
+                    // Cross lines
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-threat.radius, 0);
+                    this.ctx.lineTo(threat.radius, 0);
+                    this.ctx.moveTo(0, -threat.radius);
+                    this.ctx.lineTo(0, threat.radius);
+                    this.ctx.stroke();
+                }
+                
+                drawSquareThreat(threat) {
+                    const size = threat.radius * 1.8;
+                    
+                    // Main square
+                    this.ctx.beginPath();
+                    this.ctx.rect(-size/2, -size/2, size, size);
+                    this.ctx.strokeStyle = threat.color;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Inner square
+                    this.ctx.beginPath();
+                    this.ctx.rect(-size*0.3, -size*0.3, size*0.6, size*0.6);
+                    this.ctx.stroke();
+                    
+                    // Diagonal lines
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-size/2, -size/2);
+                    this.ctx.lineTo(size/2, size/2);
+                    this.ctx.moveTo(size/2, -size/2);
+                    this.ctx.lineTo(-size/2, size/2);
+                    this.ctx.stroke();
+                }
+                
+                drawTriangleThreat(threat) {
+                    const size = threat.radius * 1.8;
+                    
+                    // Main triangle
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, -size/1.5);
+                    this.ctx.lineTo(-size/1.5, size/1.5);
+                    this.ctx.lineTo(size/1.5, size/1.5);
+                    this.ctx.closePath();
+                    this.ctx.strokeStyle = threat.color;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Inner triangle
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, -size/3);
+                    this.ctx.lineTo(-size/3, size/3);
+                    this.ctx.lineTo(size/3, size/3);
+                    this.ctx.closePath();
+                    this.ctx.stroke();
+                    
+                    // Center dot
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                    this.ctx.fillStyle = threat.color;
+                    this.ctx.fill();
+                }
+                
+                drawPowerUps() {
+                    for (const powerUp of this.powerUps) {
+                        // Save context state
+                        this.ctx.save();
+                        
+                        // Glow effect
+                        this.ctx.shadowBlur = 15;
+                        this.ctx.shadowColor = powerUp.color;
+                        
+                        // Colors for power-up types
+                        const colors = {
+                            shield: '#00ffcc',
+                            zapper: '#ff5500',
+                            timeFreeze: '#55aaff'
+                        };
+                        
+                        // Icons for power-up types
+                        const icons = {
+                            shield: '⛨',
+                            zapper: '⚡',
+                            timeFreeze: '⏱'
+                        };
+                        
+                        // Pulse effect
+                        const pulseRadius = powerUp.radius + powerUp.pulse * 3;
+                        
+                        // Draw outer circle
+                        this.ctx.beginPath();
+                        this.ctx.arc(powerUp.x, powerUp.y, pulseRadius, 0, Math.PI * 2);
+                        this.ctx.strokeStyle = powerUp.color;
+                        this.ctx.lineWidth = 2;
+                        this.ctx.stroke();
+                        
+                        // Draw inner circle
+                        this.ctx.beginPath();
+                        this.ctx.arc(powerUp.x, powerUp.y, powerUp.radius * 0.7, 0, Math.PI * 2);
+                        this.ctx.fillStyle = powerUp.color;
+                        this.ctx.globalAlpha = 0.3;
+                        this.ctx.fill();
+                        this.ctx.globalAlpha = 1;
+                        
+                        // Draw icon
+                        this.ctx.font = '16px Arial';
+                        this.ctx.fillStyle = powerUp.color;
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillText(icons[powerUp.type], powerUp.x, powerUp.y);
+                        
+                        // Restore context state
+                        this.ctx.restore();
+                    }
+                }
+                
+                drawParticles() {
+                    for (const particle of this.particles) {
+                        this.ctx.save();
+                        
+                        if (particle.type === 'explosion') {
+                            // Draw explosion particle
+                            this.ctx.beginPath();
+                            this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                            this.ctx.fillStyle = particle.color;
+                            this.ctx.globalAlpha = particle.alpha;
+                            this.ctx.fill();
+                        } else if (particle.type === 'ringPulse') {
+                            // Draw ring pulse
+                            this.ctx.beginPath();
+                            this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                            this.ctx.strokeStyle = particle.color;
+                            this.ctx.globalAlpha = particle.alpha;
+                            this.ctx.lineWidth = 2;
+                            this.ctx.stroke();
+                        } else if (particle.type === 'scorePopup') {
+                            // Draw score popup
+                            this.ctx.font = '16px Arial';
+                            this.ctx.fillStyle = particle.color;
+                            this.ctx.textAlign = 'center';
+                            this.ctx.globalAlpha = particle.alpha;
+                            this.ctx.fillText(particle.text, particle.x, particle.y);
+                        } else if (particle.type === 'clickFeedback') {
+                            // Draw click feedback
+                            this.ctx.beginPath();
+                            this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                            this.ctx.strokeStyle = particle.color;
+                            this.ctx.globalAlpha = particle.alpha * 0.5;
+                            this.ctx.lineWidth = 1;
+                            this.ctx.stroke();
+                        }
+                        
+                        this.ctx.restore();
+                    }
+                }
+                
+                preloadSounds() {
+                    // Preload all sounds
+                    for (const sound in this.sounds) {
+                        this.sounds[sound].load();
+                    }
+                    
+                    // Preload music
+                    this.music.load();
+                    
+                    if (this.debugMode) {
+                        this.logDebug('Sound effects and music loaded');
+                    }
+                }
+                
+                playSound(soundName) {
+                    // Play the requested sound
+                    if (this.sounds[soundName]) {
+                        // Create a clone to allow overlapping sounds
+                        const soundClone = this.sounds[soundName].cloneNode();
+                        soundClone.volume = 0.6; // Set volume to 60%
+                        soundClone.play().catch(error => {
+                            // Handle autoplay restrictions
+                            if (this.debugMode) {
+                                this.logDebug(`Sound error: ${error.message}`);
+                            }
+                        });
+                    }
+                }
+                
+                toggleMute() {
+                    this.musicMuted = !this.musicMuted;
+                    
+                    if (this.musicMuted) {
+                        this.music.pause();
+                        this.muteButton.textContent = '🔇';
+                        this.muteButton.classList.add('muted');
+                    } else {
+                        if (this.gameActive && !this.gameOver) {
+                            this.music.play().catch(error => {
+                                if (this.debugMode) {
+                                    this.logDebug(`Music error: ${error.message}`);
+                                }
+                            });
+                        }
+                        this.muteButton.textContent = '🔊';
+                        this.muteButton.classList.remove('muted');
+                    }
+                    
+                    if (this.debugMode) {
+                        this.logDebug(`Music ${this.musicMuted ? 'muted' : 'unmuted'}`);
+                    }
+                }
+                
+                startMusic() {
+                    if (!this.musicMuted) {
+                        this.music.play().catch(error => {
+                            if (this.debugMode) {
+                                this.logDebug(`Music error: ${error.message}`);
+                            }
+                        });
+                    }
+                }
+                
+                stopMusic() {
+                    this.music.pause();
+                    this.music.currentTime = 0;
+                }
+            }
+            
+            // Create and start the game
+            const game = new RingDefender();
+        });
+    </script>
+</body>
+</html>
